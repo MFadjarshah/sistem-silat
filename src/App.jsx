@@ -13,6 +13,12 @@ export default function App() {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
 
+  // Form State untuk Tambah Ahli Baharu
+  const [newName, setNewName] = useState('');
+  const [newParentName, setNewParentName] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -44,7 +50,42 @@ export default function App() {
     }
   }
 
-  // 1. Fungsi Muat Naik Resit (Portal Ibu Bapa)
+  // 1. Fungsi Tambah Ahli Baharu (Admin)
+  async function handleAddStudent(e) {
+    e.preventDefault();
+    if (!newName || !newParentName) {
+      alert('Sila isi nama pelajar dan nama penjaga!');
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      const { error } = await supabase.from('students').insert([
+        {
+          name: newName,
+          parent_name: newParentName,
+          status_fee: 'Tunggakan',
+          attendance: 'Tidak Hadir'
+        }
+      ]);
+
+      if (error) throw error;
+
+      // Reset form & reload data
+      setNewName('');
+      setNewParentName('');
+      setShowAddModal(false);
+      fetchStudents();
+      alert('Ahli baharu berjaya didaftarkan!');
+    } catch (error) {
+      console.error('Ralat Tambah Ahli:', error);
+      alert('Gagal menambah ahli baharu.');
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  // 2. Fungsi Muat Naik Resit (Portal Ibu Bapa)
   async function handleUploadReceipt(e) {
     e.preventDefault();
     if (!file || !selectedStudentId) {
@@ -56,26 +97,22 @@ export default function App() {
     setUploadStatus('');
 
     try {
-      // Create unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${selectedStudentId}.${fileExt}`;
       const filePath = `receipts/${fileName}`;
 
-      // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Get Public URL
       const { data: urlData } = supabase.storage
         .from('receipts')
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
 
-      // Insert record to 'receipts' table
       const { error: dbError } = await supabase.from('receipts').insert([
         {
           student_id: selectedStudentId,
@@ -88,7 +125,7 @@ export default function App() {
 
       setUploadStatus('success');
       setFile(null);
-      fetchReceipts(); // Refresh receipts list
+      fetchReceipts();
     } catch (error) {
       console.error('Ralat Upload:', error);
       setUploadStatus('error');
@@ -97,23 +134,21 @@ export default function App() {
     }
   }
 
-  // 2. Fungsi Sahkan Pembayaran (Portal Admin)
+  // 3. Fungsi Sahkan Pembayaran (Portal Admin)
   async function handleApproveReceipt(receiptId, studentId) {
     try {
-      // Kemas kini status resit -> Approved
       await supabase
         .from('receipts')
         .update({ status: 'Approved' })
         .eq('id', receiptId);
 
-      // Kemas kini status yuran pelajar -> Lunas
       await supabase
         .from('students')
         .update({ status_fee: 'Lunas' })
         .eq('id', studentId);
 
       alert('Pembayaran berjaya disahkan! Status yuran pelajar telah dikemas kini kepada LUNAS.');
-      fetchData(); // Refresh data
+      fetchData();
     } catch (error) {
       console.error('Ralat Pengesahan:', error);
       alert('Gagal mengemas kini pengesahan.');
@@ -173,7 +208,7 @@ export default function App() {
 
         <div className="p-4 border-t border-slate-800 text-xs text-slate-500 flex justify-between items-center">
           <span>Status: <strong className="text-emerald-400">Online</strong></span>
-          <span className="bg-slate-800 px-2 py-1 rounded">v1.0</span>
+          <span className="bg-slate-800 px-2 py-1 rounded">v1.1</span>
         </div>
       </aside>
 
@@ -201,6 +236,12 @@ export default function App() {
                   <h3 className="text-base font-bold text-slate-900">Senarai Pelajar Berdaftar</h3>
                   <p className="text-xs text-slate-500">Data dikemaskini secara langsung dari Supabase</p>
                 </div>
+                <button 
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
+                >
+                  <span>+</span> Tambah Ahli Baharu
+                </button>
               </div>
 
               {loading ? (
@@ -241,6 +282,66 @@ export default function App() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* MODAL: TAMBAH AHLI BAHARU */}
+          {showAddModal && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <h3 className="text-base font-bold text-slate-900">Tambah Ahli Silat Baharu</h3>
+                  <button 
+                    onClick={() => setShowAddModal(false)}
+                    className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddStudent} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Pelajar</label>
+                    <input 
+                      type="text" 
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Contoh: Luqman Hakim"
+                      className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Penjaga / Ibu Bapa</label>
+                    <input 
+                      type="text" 
+                      value={newParentName}
+                      onChange={(e) => setNewParentName(e.target.value)}
+                      placeholder="Contoh: Encik Rahim"
+                      className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button 
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isAdding}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+                    >
+                      {isAdding ? 'Menyimpan...' : 'Simpan Ahli'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 
