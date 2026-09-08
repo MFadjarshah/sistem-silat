@@ -19,6 +19,14 @@ export default function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // State Perincian Yuran Bulanan (Modal)
+  const [selectedStudentForFees, setSelectedStudentForFees] = useState(null);
+  const [monthlyFeesData, setMonthlyFeesData] = useState([]);
+  const [loadingFees, setLoadingFees] = useState(false);
+
+  // State untuk peranti mengemaskini
+  const [updatingId, setUpdatingId] = useState(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -50,6 +58,77 @@ export default function App() {
     }
   }
 
+  // Buka Modal & Ambil Data Yuran Bulanan Pelajar (Dengan Auto-Generate)
+  async function openMonthlyFeesModal(student) {
+    setSelectedStudentForFees(student);
+    setLoadingFees(true);
+
+    const monthsList = [
+      'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
+      'Juli', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
+    ];
+
+    try {
+      // 1. Semak data sedia ada di Supabase
+      let { data, error } = await supabase
+        .from('monthly_fees')
+        .select('*')
+        .eq('student_id', student.id)
+        .eq('year', 2026)
+        .order('id', { ascending: true });
+
+      if (error) throw error;
+
+      // 2. Jika tiada data (kosong), jana 12 bulan secara automatik ke Supabase
+      if (!data || data.length === 0) {
+        const payload = monthsList.map((m) => ({
+          student_id: student.id,
+          month_name: m,
+          year: 2026,
+          status: 'Tunggakan'
+        }));
+
+        const { data: insertedData, error: insertError } = await supabase
+          .from('monthly_fees')
+          .insert(payload)
+          .select();
+
+        if (insertError) throw insertError;
+
+        // Susun data hasil insert
+        data = (insertedData || []).sort((a, b) => a.id - b.id);
+      }
+
+      setMonthlyFeesData(data);
+    } catch (err) {
+      console.error('Ralat Memuatkan Yuran Bulanan:', err);
+      alert('Gagal mengambil data yuran bulanan. Sila pastikan jadual monthly_fees telah dicipta di Supabase.');
+    } finally {
+      setLoadingFees(false);
+    }
+  }
+
+  // Tukar status yuran bulan spesifik
+  async function toggleMonthFeeStatus(feeId, currentStatus) {
+    const newStatus = currentStatus === 'Selesai' ? 'Tunggakan' : 'Selesai';
+
+    try {
+      const { error } = await supabase
+        .from('monthly_fees')
+        .update({ status: newStatus })
+        .eq('id', feeId);
+
+      if (error) throw error;
+
+      setMonthlyFeesData(monthlyFeesData.map(item =>
+        item.id === feeId ? { ...item, status: newStatus } : item
+      ));
+    } catch (error) {
+      console.error('Ralat Tukar Status Bulan:', error);
+      alert('Gagal mengemaskini status yuran bulan.');
+    }
+  }
+
   // 1. Fungsi Tambah Ahli Baharu (Admin)
   async function handleAddStudent(e) {
     e.preventDefault();
@@ -60,18 +139,36 @@ export default function App() {
 
     setIsAdding(true);
     try {
-      const { error } = await supabase.from('students').insert([
-        {
-          name: newName,
-          parent_name: newParentName,
-          status_fee: 'Tunggakan',
-          attendance: 'Tidak Hadir'
-        }
-      ]);
+      const { data: newStudent, error } = await supabase
+        .from('students')
+        .insert([
+          {
+            name: newName,
+            parent_name: newParentName,
+            status_fee_annual: 'Tunggakan',
+            attendance: 'Tidak Hadir'
+          }
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Reset form & reload data
+      // Terus jana 12 bulan yuran untuk ahli baharu ini
+      if (newStudent) {
+        const monthsList = [
+          'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
+          'Juli', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
+        ];
+        const payload = monthsList.map((m) => ({
+          student_id: newStudent.id,
+          month_name: m,
+          year: 2026,
+          status: 'Tunggakan'
+        }));
+        await supabase.from('monthly_fees').insert(payload);
+      }
+
       setNewName('');
       setNewParentName('');
       setShowAddModal(false);
@@ -85,7 +182,56 @@ export default function App() {
     }
   }
 
-  // 2. Fungsi Muat Naik Resit (Portal Ibu Bapa)
+  // 2. Fungsi Tanda / Tukar Kehadiran
+  async function toggleAttendance(studentId, currentStatus) {
+    const newStatus = currentStatus === 'Hadir' ? 'Tidak Hadir' : 'Hadir';
+    setUpdatingId(studentId);
+
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ attendance: newStatus })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      setStudents(students.map(student =>
+        student.id === studentId ? { ...student, attendance: newStatus } : student
+      ));
+    } catch (error) {
+      console.error('Ralat Tukar Kehadiran:', error);
+      alert('Gagal mengemaskini kehadiran.');
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // Fungsi Tukar Status Yuran Tahunan
+  async function toggleAnnualFeeStatus(studentId, currentStatus) {
+    const newStatus = currentStatus === 'Selesai' ? 'Tunggakan' : 'Selesai';
+    setUpdatingId(studentId);
+
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ status_fee_annual: newStatus })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      // Kemas kini state tempatan
+      setStudents(students.map(student =>
+        student.id === studentId ? { ...student, status_fee_annual: newStatus } : student
+      ));
+    } catch (error) {
+      console.error('Ralat Tukar Status Yuran Tahunan:', error);
+      alert('Gagal mengemaskini status yuran tahunan.');
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  // 3. Fungsi Muat Naik Resit (Portal Ibu Bapa)
   async function handleUploadReceipt(e) {
     e.preventDefault();
     if (!file || !selectedStudentId) {
@@ -134,20 +280,22 @@ export default function App() {
     }
   }
 
-  // 3. Fungsi Sahkan Pembayaran (Portal Admin)
-  async function handleApproveReceipt(receiptId, studentId) {
+  // 4. Fungsi Sahkan Pembayaran (Portal Admin)
+  async function handleApproveReceipt(receiptId, studentId, type = 'monthly') {
     try {
       await supabase
         .from('receipts')
         .update({ status: 'Approved' })
         .eq('id', receiptId);
 
-      await supabase
-        .from('students')
-        .update({ status_fee: 'Lunas' })
-        .eq('id', studentId);
+      if (type === 'annual') {
+        await supabase
+          .from('students')
+          .update({ status_fee_annual: 'Selesai' })
+          .eq('id', studentId);
+      }
 
-      alert('Pembayaran berjaya disahkan! Status yuran pelajar telah dikemas kini kepada LUNAS.');
+      alert('Pembayaran berjaya disahkan!');
       fetchData();
     } catch (error) {
       console.error('Ralat Pengesahan:', error);
@@ -157,7 +305,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-slate-100 font-sans">
-      
+
       {/* SIDEBAR NAVIGATION */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex shadow-xl">
         <div>
@@ -175,18 +323,16 @@ export default function App() {
 
             <button
               onClick={() => setActiveMenu('admin-members')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeMenu === 'admin-members' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'admin-members' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+                }`}
             >
               <span>👥</span> Senarai Ahli Silat
             </button>
 
             <button
               onClick={() => setActiveMenu('admin-payments')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeMenu === 'admin-payments' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'admin-payments' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+                }`}
             >
               <span>💳</span> Semakan Yuran & Resit
             </button>
@@ -197,9 +343,8 @@ export default function App() {
 
             <button
               onClick={() => setActiveMenu('parent-portal')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                activeMenu === 'parent-portal' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'parent-portal' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+                }`}
             >
               <span>👨‍👩‍👧</span> Portal Ibu Bapa
             </button>
@@ -208,13 +353,13 @@ export default function App() {
 
         <div className="p-4 border-t border-slate-800 text-xs text-slate-500 flex justify-between items-center">
           <span>Status: <strong className="text-emerald-400">Online</strong></span>
-          <span className="bg-slate-800 px-2 py-1 rounded">v1.1</span>
+          <span className="bg-slate-800 px-2 py-1 rounded">v1.4</span>
         </div>
       </aside>
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
+
         <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
           <h2 className="text-lg font-bold text-slate-800">
             {activeMenu === 'admin-members' && 'Pengurusan Ahli Silat'}
@@ -227,16 +372,16 @@ export default function App() {
         </header>
 
         <main className="flex-1 p-6 overflow-y-auto">
-          
+
           {/* MENU 1: SENARAI AHLI */}
           {activeMenu === 'admin-members' && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Senarai Pelajar Berdaftar</h3>
-                  <p className="text-xs text-slate-500">Data dikemaskini secara langsung dari Supabase</p>
+                  <p className="text-xs text-slate-500">Klik "Semak Yuran Bulanan" untuk melihat perincian 12 bulan</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowAddModal(true)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
                 >
@@ -253,7 +398,8 @@ export default function App() {
                       <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider border-b">
                         <th className="p-4">Nama Pelajar</th>
                         <th className="p-4">Nama Penjaga</th>
-                        <th className="p-4">Status Yuran</th>
+                        <th className="p-4">Yuran Tahunan</th>
+                        <th className="p-4">Yuran Bulanan</th>
                         <th className="p-4">Kehadiran</th>
                       </tr>
                     </thead>
@@ -263,18 +409,37 @@ export default function App() {
                           <td className="p-4 font-semibold text-slate-900">{student.name}</td>
                           <td className="p-4 text-slate-600">{student.parent_name}</td>
                           <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              student.status_fee === 'Lunas' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {student.status_fee}
-                            </span>
+                            <button
+                              onClick={() => toggleAnnualFeeStatus(student.id, student.status_fee_annual)}
+                              disabled={updatingId === student.id}
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${student.status_fee_annual === 'Selesai'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                } ${updatingId === student.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              Tahunan: {student.status_fee_annual || 'Tunggakan'}
+                            </button>
                           </td>
                           <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              student.attendance === 'Hadir' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {student.attendance}
-                            </span>
+                            <button
+                              onClick={() => openMonthlyFeesModal(student)}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5"
+                            >
+                              <span>📅</span> Semak Yuran Bulanan
+                            </button>
+                          </td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => toggleAttendance(student.id, student.attendance)}
+                              disabled={updatingId === student.id}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5 ${student.attendance === 'Hadir'
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                                } ${updatingId === student.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              <span>{student.attendance === 'Hadir' ? '✓' : '✗'}</span>
+                              <span>{student.attendance === 'Hadir' ? 'Hadir' : 'Tidak Hadir'}</span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -285,13 +450,74 @@ export default function App() {
             </div>
           )}
 
+          {/* MODAL: PERINCIAN YURAN BULANAN */}
+          {selectedStudentForFees && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Rekod Yuran Bulanan (2026)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Pelajar: <span className="font-semibold text-emerald-700">{selectedStudentForFees.name}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedStudentForFees(null)}
+                    className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {loadingFees ? (
+                  <p className="text-center py-6 text-xs text-slate-500">Memuatkan perincian yuran...</p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-80 overflow-y-auto p-1">
+                    {monthlyFeesData.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`p-3 rounded-lg border text-center flex flex-col justify-between gap-2 transition-all ${item.status === 'Selesai'
+                          ? 'bg-emerald-50/50 border-emerald-200'
+                          : 'bg-rose-50/50 border-rose-200'
+                          }`}
+                      >
+                        <span className="text-xs font-bold text-slate-800">{item.month_name}</span>
+                        <button
+                          onClick={() => toggleMonthFeeStatus(item.id, item.status)}
+                          className={`text-xs px-2 py-1 rounded font-semibold transition-colors ${item.status === 'Selesai'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'bg-rose-600 text-white hover:bg-rose-700'
+                            }`}
+                        >
+                          {item.status}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border-t pt-3 flex justify-between items-center text-xs text-slate-500">
+                  <span>* Klik butang status untuk tukar secara terus</span>
+                  <button
+                    onClick={() => setSelectedStudentForFees(null)}
+                    className="px-4 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-900"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* MODAL: TAMBAH AHLI BAHARU */}
           {showAddModal && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
                 <div className="flex justify-between items-center border-b pb-3">
                   <h3 className="text-base font-bold text-slate-900">Tambah Ahli Silat Baharu</h3>
-                  <button 
+                  <button
                     onClick={() => setShowAddModal(false)}
                     className="text-slate-400 hover:text-slate-600 font-bold text-lg"
                   >
@@ -302,8 +528,8 @@ export default function App() {
                 <form onSubmit={handleAddStudent} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Pelajar</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       placeholder="Contoh: Luqman Hakim"
@@ -314,8 +540,8 @@ export default function App() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Penjaga / Ibu Bapa</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newParentName}
                       onChange={(e) => setNewParentName(e.target.value)}
                       placeholder="Contoh: Encik Rahim"
@@ -325,14 +551,14 @@ export default function App() {
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowAddModal(false)}
                       className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
                     >
                       Batal
                     </button>
-                    <button 
+                    <button
                       type="submit"
                       disabled={isAdding}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
@@ -371,9 +597,9 @@ export default function App() {
                           <td className="p-4 font-semibold text-slate-900">{rcpt.students?.name || 'Pelajar Deleted'}</td>
                           <td className="p-4 text-slate-600">{rcpt.students?.parent_name || '-'}</td>
                           <td className="p-4">
-                            <a 
-                              href={rcpt.file_url} 
-                              target="_blank" 
+                            <a
+                              href={rcpt.file_url}
+                              target="_blank"
                               rel="noreferrer"
                               className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-3 py-1.5 rounded-md border border-emerald-200 inline-flex items-center gap-1"
                             >
@@ -381,20 +607,21 @@ export default function App() {
                             </a>
                           </td>
                           <td className="p-4">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                              rcpt.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${rcpt.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
                               {rcpt.status}
                             </span>
                           </td>
                           <td className="p-4 text-center">
                             {rcpt.status === 'Pending' ? (
-                              <button
-                                onClick={() => handleApproveReceipt(rcpt.id, rcpt.student_id)}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm"
-                              >
-                                Sahkan Pembayaran
-                              </button>
+                              <div className="flex justify-center gap-2">
+                                <button
+                                  onClick={() => handleApproveReceipt(rcpt.id, rcpt.student_id, 'annual')}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors shadow-sm"
+                                >
+                                  Sahkan (Tahunan)
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-xs text-slate-400 font-medium">Selesai</span>
                             )}
@@ -429,7 +656,7 @@ export default function App() {
               <form onSubmit={handleUploadReceipt} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Nama Anak</label>
-                  <select 
+                  <select
                     value={selectedStudentId}
                     onChange={(e) => setSelectedStudentId(e.target.value)}
                     className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -444,16 +671,16 @@ export default function App() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Fail Resit (Gambar / PDF)</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     onChange={(e) => setFile(e.target.files[0])}
                     accept="image/*,application/pdf"
-                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer" 
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
                   />
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={uploading}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors shadow-sm disabled:opacity-50"
                 >
