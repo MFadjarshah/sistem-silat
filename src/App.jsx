@@ -70,6 +70,9 @@ export default function App() {
   const [newBeltLevel, setNewBeltLevel] = useState('Putih');
   const [isAdding, setIsAdding] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [newGender, setNewGender] = useState('');
+  const [newAge, setNewAge] = useState('');
 
   // Edit Ahli
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState(null);
@@ -78,6 +81,9 @@ export default function App() {
   const [editAddress, setEditAddress] = useState('');
   const [editBeltLevel, setEditBeltLevel] = useState('Putih');
   const [isUpdatingStudent, setIsUpdatingStudent] = useState(false);
+  const [editPhone, setEditPhone] = useState('');
+  const [editGender, setEditGender] = useState('');
+  const [editAge, setEditAge] = useState('');
 
   // Filter Status (Aktif / Berhenti)
   const [memberFilterStatus, setMemberFilterStatus] = useState('Aktif');
@@ -269,39 +275,57 @@ export default function App() {
     }
   }
 
-  async function toggleMonthFeeDirect(studentId, monthName, currentStatus) {
-    const newStatus = currentStatus === 'Selesai' ? 'Tunggakan' : 'Selesai';
+  async function toggleMonthlyFeeDirect(studentId, targetMonthName, currentStatus) {
+  const MONTHS_ORDER = [
+    'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
+    'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
+  ];
 
-    try {
-      const student = students.find((s) => s.id === studentId);
-      const existingFee = (student?.monthly_fees || []).find((f) => f.month_name === monthName);
+  const targetIndex = MONTHS_ORDER.indexOf(targetMonthName);
+  if (targetIndex === -1) return;
 
-      if (existingFee) {
-        const { error } = await supabase
-          .from('monthly_fees')
-          .update({ status: newStatus })
-          .eq('id', existingFee.id);
+  const isNowPaid = currentStatus !== 'Selesai';
+  const newStatus = isNowPaid ? 'Selesai' : 'Tunggakan';
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('monthly_fees').insert([
-          {
-            student_id: studentId,
-            month_name: monthName,
-            year: 2026,
-            status: newStatus
+  // Tentukan senarai bulan yang akan dikemaskini
+  const monthsToUpdate = isNowPaid
+    ? MONTHS_ORDER.slice(0, targetIndex + 1)
+    : MONTHS_ORDER.slice(targetIndex);
+
+  try {
+    // 1. Kemaskini pangkalan data Supabase
+    const { error } = await supabase
+      .from('monthly_fees')
+      .update({ status: newStatus })
+      .eq('student_id', studentId)
+      .in('month_name', monthsToUpdate);
+
+    if (error) throw error;
+
+    // 2. Kemaskini State Utama (UI Update)
+    setStudents((prevStudents) =>
+      prevStudents.map((student) => {
+        if (student.id !== studentId) return student;
+
+        const updatedFees = (student.monthly_fees || []).map((fee) => {
+          if (monthsToUpdate.includes(fee.month_name)) {
+            return { ...fee, status: newStatus };
           }
-        ]);
+          return fee;
+        });
 
-        if (error) throw error;
-      }
+        return { ...student, monthly_fees: updatedFees };
+      })
+    );
 
-      fetchStudents();
-    } catch (error) {
-      console.error('Ralat Yuran Bulan:', error);
-      alert('Gagal mengemaskini status yuran.');
-    }
+    // 3. Popup Pengesahan Ringkas
+    alert(`Status yuran sehingga bulan ${targetMonthName} berjaya ditukar kepada "${newStatus}"!`);
+
+  } catch (err) {
+    console.error('Ralat kemaskini yuran bulanan:', err);
+    alert(`Gagal mengemaskini yuran: ${err.message || 'Sila cuba lagi'}`);
   }
+}
 
   async function generateMonthlyFeesForStudents(studentIds) {
     const monthsList = [
@@ -334,12 +358,18 @@ export default function App() {
 
     setIsAdding(true);
     try {
+      // Tukar age ke integer, atau null jika kosong/invalid
+      const parsedAge = newAge !== '' && newAge !== null ? parseInt(newAge, 10) : null;
+
       const { data: newStudent, error } = await supabase
         .from('students')
         .insert([
           {
             name: newName,
             parent_name: newParentName,
+            gender: newGender || null,
+            age: isNaN(parsedAge) ? null : parsedAge,
+            phone: newPhone,
             address: newAddress,
             belt_level: newBeltLevel,
             status: 'Aktif',
@@ -358,6 +388,9 @@ export default function App() {
 
       setNewName('');
       setNewParentName('');
+      setNewGender('');
+      setNewAge('');
+      setNewPhone('');
       setNewAddress('');
       setNewBeltLevel('Putih');
       setShowAddModal(false);
@@ -365,18 +398,10 @@ export default function App() {
       alert('Ahli baharu berjaya didaftarkan!');
     } catch (error) {
       console.error('Ralat Tambah Ahli:', error);
-      alert('Gagal menambah ahli.');
+      alert(`Gagal menambah ahli: ${error.message || 'Sila semak konsol'}`);
     } finally {
       setIsAdding(false);
     }
-  }
-
-  function openEditModal(student) {
-    setSelectedStudentForEdit(student);
-    setEditName(student.name || '');
-    setEditParentName(student.parent_name || '');
-    setEditAddress(student.address || '');
-    setEditBeltLevel(student.belt_level || 'Putih');
   }
 
   async function handleUpdateStudent(e) {
@@ -385,11 +410,17 @@ export default function App() {
 
     setIsUpdatingStudent(true);
     try {
+      // Tukar editAge ke integer, atau null jika kosong/invalid
+      const parsedAge = editAge !== '' && editAge !== null ? parseInt(editAge, 10) : null;
+
       const { error } = await supabase
         .from('students')
         .update({
           name: editName,
           parent_name: editParentName,
+          gender: editGender || null,
+          age: isNaN(parsedAge) ? null : parsedAge,
+          phone: editPhone,
           address: editAddress,
           belt_level: editBeltLevel
         })
@@ -402,7 +433,51 @@ export default function App() {
       fetchStudents();
     } catch (err) {
       console.error('Ralat Kemaskini Pelajar:', err);
-      alert('Gagal mengemaskini maklumat pelajar.');
+      alert(`Gagal mengemaskini: ${err.message || err.details || 'Sila semak konsol'}`);
+    } finally {
+      setIsUpdatingStudent(false);
+    }
+  }
+
+  function openEditModal(student) {
+    setSelectedStudentForEdit(student);
+    setEditName(student.name || '');
+    setEditParentName(student.parent_name || '');
+    setEditGender(student.gender || '');
+    setEditAge(student.age || '');
+    setEditPhone(student.phone || '');
+    setEditAddress(student.address || '');
+    setEditBeltLevel(student.belt_level || 'Putih');
+  }
+
+  async function handleUpdateStudent(e) {
+    e.preventDefault();
+    if (!selectedStudentForEdit) return;
+
+    setIsUpdatingStudent(true);
+    try {
+      // Hantar data spesifik sahaja, elakkan menghantar data berantai dari jadual lain
+      const { error } = await supabase
+        .from('students')
+        .update({
+          name: editName,
+          parent_name: editParentName,
+          gender: editGender,
+          age: editAge,
+          phone: editPhone,
+          address: editAddress,
+          belt_level: editBeltLevel
+        })
+        .eq('id', selectedStudentForEdit.id);
+
+      if (error) throw error;
+
+      alert('Maklumat pelajar berjaya dikemaskini!');
+      setSelectedStudentForEdit(null);
+      fetchStudents();
+    } catch (err) {
+      console.error('Ralat Kemaskini Pelajar:', err);
+      alert(`Gagal mengemaskini: ${err.message || err.details || 'Sila semak konsol'}`);
     } finally {
       setIsUpdatingStudent(false);
     }
@@ -824,7 +899,7 @@ export default function App() {
               renderExcelFilterPopover={renderExcelFilterPopover}
               toggleAnnualFeeStatus={toggleAnnualFeeStatus}
               updatingId={updatingId}
-              toggleMonthFeeDirect={toggleMonthFeeDirect}
+              toggleMonthlyFeeDirect={toggleMonthlyFeeDirect}
               monthsListShort={monthsListShort}
               getBeltBadgeStyle={getBeltBadgeStyle}
               openEditModal={openEditModal}
@@ -874,6 +949,12 @@ export default function App() {
         setNewName={setNewName}
         newParentName={newParentName}
         setNewParentName={setNewParentName}
+        newGender={newGender}
+        setNewGender={setNewGender}
+        newAge={newAge}
+        setNewAge={setNewAge}
+        newPhone={newPhone}
+        setNewPhone={setNewPhone}
         newAddress={newAddress}
         setNewAddress={setNewAddress}
         newBeltLevel={newBeltLevel}
@@ -890,6 +971,12 @@ export default function App() {
         setEditName={setEditName}
         editParentName={editParentName}
         setEditParentName={setEditParentName}
+        editGender={editGender}
+        setEditGender={setEditGender}
+        editAge={editAge}
+        setEditAge={setEditAge}
+        editPhone={editPhone}
+        setEditPhone={setEditPhone}
         editAddress={editAddress}
         setEditAddress={setEditAddress}
         editBeltLevel={editBeltLevel}

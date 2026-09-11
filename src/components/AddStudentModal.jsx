@@ -8,6 +8,12 @@ export default function AddStudentModal({
   setNewName,
   newParentName,
   setNewParentName,
+  newGender,
+  setNewGender,
+  newAge,
+  setNewAge,
+  newPhone,
+  setNewPhone,
   newAddress,
   setNewAddress,
   newBeltLevel,
@@ -40,6 +46,43 @@ export default function AddStudentModal({
               required
               value={newParentName}
               onChange={(e) => setNewParentName(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div className='grid grid-cols-2 gap-3'>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Jantina</label>
+              <select
+                required
+                value={newGender}
+                onChange={(e) => setNewGender(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+              >
+                <option value="">-- Pilih --</option>
+                <option value="Lelaki">Lelaki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Umur</label>
+              <input
+                type="text"
+                required
+                value={newAge}
+                onChange={(e) => setNewAge(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Nombor Telefon</label>
+            <input
+              type="tel"
+              placeholder="Cth: 0123456789"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
           </div>

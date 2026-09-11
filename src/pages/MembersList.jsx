@@ -10,7 +10,7 @@ export default function MembersList({
   renderExcelFilterPopover,
   toggleAnnualFeeStatus,
   updatingId,
-  toggleMonthFeeDirect,
+  toggleMonthlyFeeDirect,
   monthsListShort,
   getBeltBadgeStyle,
   openEditModal,
@@ -54,6 +54,7 @@ export default function MembersList({
                 <tr>
                   <th className="py-3 px-3 w-12 text-center border-r border-slate-200">NO.</th>
 
+                  {/* NAMA PELAJAR */}
                   <th className="py-3 px-3 border-r border-slate-200 relative">
                     <div className="flex items-center justify-between gap-2">
                       <span>NAMA PELAJAR</span>
@@ -72,24 +73,45 @@ export default function MembersList({
                     {openFilterCol === 'name' && renderExcelFilterPopover('name', 'NAMA PELAJAR')}
                   </th>
 
-                  <th className="py-3 px-3 border-r border-slate-200 relative">
-                    <div className="flex items-center justify-between gap-2">
-                      <span>NAMA PENJAGA</span>
+                  {/* JANTINA */}
+                  <th className="py-3 px-3 border-r border-slate-200 relative w-28 text-center">
+                    <div className="flex items-center justify-between gap-1">
+                      <span>JANTINA</span>
                       <button
                         onClick={() => {
                           setColumnSearch('');
-                          setOpenFilterCol(openFilterCol === 'parent_name' ? null : 'parent_name');
+                          setOpenFilterCol(openFilterCol === 'gender' ? null : 'gender');
                         }}
                         className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
-                          (filters.parent_name || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                          (filters.gender || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
                         }`}
                       >
                         🔻
                       </button>
                     </div>
-                    {openFilterCol === 'parent_name' && renderExcelFilterPopover('parent_name', 'NAMA PENJAGA')}
+                    {openFilterCol === 'gender' && renderExcelFilterPopover('gender', 'JANTINA')}
                   </th>
 
+                  {/* UMUR */}
+                  <th className="py-3 px-3 border-r border-slate-200 relative w-24 text-center">
+                    <div className="flex items-center justify-between gap-1">
+                      <span>UMUR</span>
+                      <button
+                        onClick={() => {
+                          setColumnSearch('');
+                          setOpenFilterCol(openFilterCol === 'age' ? null : 'age');
+                        }}
+                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
+                          (filters.age || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                        }`}
+                      >
+                        🔻
+                      </button>
+                    </div>
+                    {openFilterCol === 'age' && renderExcelFilterPopover('age', 'UMUR')}
+                  </th>
+
+                  {/* BENGKUNG */}
                   <th className="py-3 px-3 border-r border-slate-200 relative">
                     <div className="flex items-center justify-between gap-2">
                       <span>BENGKUNG</span>
@@ -108,6 +130,7 @@ export default function MembersList({
                     {openFilterCol === 'belt_level' && renderExcelFilterPopover('belt_level', 'BENGKUNG')}
                   </th>
 
+                  {/* YURAN TAHUNAN */}
                   <th className="py-3 px-3 border-r border-slate-200 relative">
                     <div className="flex items-center justify-between gap-2">
                       <span>YURAN TAHUNAN</span>
@@ -127,13 +150,15 @@ export default function MembersList({
                   </th>
 
                   <th className="py-3 px-3 text-center border-r border-slate-200">YURAN BULANAN 2026</th>
-                  <th className="py-3 px-3 text-right">TINDAKAN</th>
+                  {/* <th className="py-3 px-3 text-right">TINDAKAN</th> */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {displayedStudents.map((student, index) => (
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-2.5 px-3 font-bold text-slate-400 text-center w-12">{index + 1}</td>
+                    
+                    {/* NAMA PELAJAR */}
                     <td className="py-2.5 px-3 font-semibold text-slate-900">
                       <button
                         onClick={() => openEditModal(student)}
@@ -142,12 +167,33 @@ export default function MembersList({
                         {student.name}
                       </button>
                     </td>
-                    <td className="py-2.5 px-3 text-slate-600">{student.parent_name || '-'}</td>
+
+                    {/* JANTINA (L / P) */}
+                    <td className="py-2.5 px-3 text-center font-medium">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs ${
+                        student.gender === 'L' || student.gender === 'Lelaki'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : student.gender === 'P' || student.gender === 'Perempuan'
+                          ? 'bg-pink-50 text-pink-700 border border-pink-200'
+                          : 'text-slate-400'
+                      }`}>
+                        {student.gender === 'Lelaki' ? 'L' : student.gender === 'Perempuan' ? 'P' : student.gender || '-'}
+                      </span>
+                    </td>
+
+                    {/* UMUR */}
+                    <td className="py-2.5 px-3 text-center text-slate-600 font-medium">
+                      {student.age ? `${student.age}` : '-'}
+                    </td>
+
+                    {/* BENGKUNG */}
                     <td className="py-2.5 px-3">
                       <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded border ${getBeltBadgeStyle(student.belt_level)}`}>
                         {student.belt_level}
                       </span>
                     </td>
+
+                    {/* YURAN TAHUNAN */}
                     <td className="py-2.5 px-3">
                       <button
                         onClick={() => toggleAnnualFeeStatus(student.id, student.status_fee_annual)}
@@ -161,16 +207,20 @@ export default function MembersList({
                         {student.status_fee_annual}
                       </button>
                     </td>
-                    <td className="py-2.5 px-3">
+
+                    {/* YURAN BULANAN */}
+                    <td className="py-2.5 px-3 border-r border-slate-100">
                       <div className="flex items-center justify-center gap-1">
                         {monthsListShort.map((m) => {
                           const fee = (student.monthly_fees || []).find((f) => f.month_name === m.full);
                           const isPaid = fee?.status === 'Selesai';
+                          const currentStatus = isPaid ? 'Selesai' : 'Tunggakan';
+
                           return (
                             <button
                               key={m.short}
-                              title={`${m.full}: ${isPaid ? 'Selesai' : 'Tunggakan'}`}
-                              onClick={() => toggleMonthFeeDirect(student.id, m.full, fee?.status)}
+                              title={`${m.full}: ${currentStatus}`}
+                              onClick={() => toggleMonthlyFeeDirect(student.id, m.full, currentStatus)}
                               className={`w-5 h-5 text-[9px] font-bold rounded flex items-center justify-center transition-all ${
                                 isPaid
                                   ? 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -183,14 +233,16 @@ export default function MembersList({
                         })}
                       </div>
                     </td>
-                    <td className="py-2.5 px-3 text-right">
+
+                    {/* TINDAKAN */}
+                    {/* <td className="py-2.5 px-3 text-right">
                       <button
                         onClick={() => openEditModal(student)}
                         className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-2 py-1 rounded border border-slate-300 transition-colors"
                       >
                         Edit
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>
