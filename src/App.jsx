@@ -32,7 +32,7 @@ const monthsListShort = [
   { short: 'Apr', full: 'April' },
   { short: 'Mei', full: 'Mei' },
   { short: 'Jun', full: 'Jun' },
-  { short: 'Jul', full: 'Juli' },
+  { short: 'Jul', full: 'Julai' },
   { short: 'Ogo', full: 'Ogos' },
   { short: 'Sep', full: 'September' },
   { short: 'Okt', full: 'Oktober' },
@@ -276,61 +276,61 @@ export default function App() {
   }
 
   async function toggleMonthlyFeeDirect(studentId, targetMonthName, currentStatus) {
-  const MONTHS_ORDER = [
-    'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
-    'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
-  ];
+    const MONTHS_ORDER = [
+      'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
+      'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
+    ];
 
-  const targetIndex = MONTHS_ORDER.indexOf(targetMonthName);
-  if (targetIndex === -1) return;
+    const targetIndex = MONTHS_ORDER.indexOf(targetMonthName);
+    if (targetIndex === -1) return;
 
-  const isNowPaid = currentStatus !== 'Selesai';
-  const newStatus = isNowPaid ? 'Selesai' : 'Tunggakan';
+    const isNowPaid = currentStatus !== 'Selesai';
+    const newStatus = isNowPaid ? 'Selesai' : 'Tunggakan';
 
-  // Tentukan senarai bulan yang akan dikemaskini
-  const monthsToUpdate = isNowPaid
-    ? MONTHS_ORDER.slice(0, targetIndex + 1)
-    : MONTHS_ORDER.slice(targetIndex);
+    // Tentukan senarai bulan yang akan dikemaskini
+    const monthsToUpdate = isNowPaid
+      ? MONTHS_ORDER.slice(0, targetIndex + 1)
+      : MONTHS_ORDER.slice(targetIndex);
 
-  try {
-    // 1. Kemaskini pangkalan data Supabase
-    const { error } = await supabase
-      .from('monthly_fees')
-      .update({ status: newStatus })
-      .eq('student_id', studentId)
-      .in('month_name', monthsToUpdate);
+    try {
+      // 1. Kemaskini pangkalan data Supabase
+      const { error } = await supabase
+        .from('monthly_fees')
+        .update({ status: newStatus })
+        .eq('student_id', studentId)
+        .in('month_name', monthsToUpdate);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // 2. Kemaskini State Utama (UI Update)
-    setStudents((prevStudents) =>
-      prevStudents.map((student) => {
-        if (student.id !== studentId) return student;
+      // 2. Kemaskini State Utama (UI Update)
+      setStudents((prevStudents) =>
+        prevStudents.map((student) => {
+          if (student.id !== studentId) return student;
 
-        const updatedFees = (student.monthly_fees || []).map((fee) => {
-          if (monthsToUpdate.includes(fee.month_name)) {
-            return { ...fee, status: newStatus };
-          }
-          return fee;
-        });
+          const updatedFees = (student.monthly_fees || []).map((fee) => {
+            if (monthsToUpdate.includes(fee.month_name)) {
+              return { ...fee, status: newStatus };
+            }
+            return fee;
+          });
 
-        return { ...student, monthly_fees: updatedFees };
-      })
-    );
+          return { ...student, monthly_fees: updatedFees };
+        })
+      );
 
-    // 3. Popup Pengesahan Ringkas
-    alert(`Status yuran sehingga bulan ${targetMonthName} berjaya ditukar kepada "${newStatus}"!`);
+      // 3. Popup Pengesahan Ringkas
+      alert(`Status yuran sehingga bulan ${targetMonthName} berjaya ditukar kepada "${newStatus}"!`);
 
-  } catch (err) {
-    console.error('Ralat kemaskini yuran bulanan:', err);
-    alert(`Gagal mengemaskini yuran: ${err.message || 'Sila cuba lagi'}`);
+    } catch (err) {
+      console.error('Ralat kemaskini yuran bulanan:', err);
+      alert(`Gagal mengemaskini yuran: ${err.message || 'Sila cuba lagi'}`);
+    }
   }
-}
 
   async function generateMonthlyFeesForStudents(studentIds) {
     const monthsList = [
       'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun',
-      'Juli', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
+      'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
     ];
     const feesPayload = [];
     studentIds.forEach((id) => {

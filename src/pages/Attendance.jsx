@@ -40,20 +40,21 @@ export default function Attendance({
             <div
               key={student.id}
               onClick={() => toggleAttendanceLocal(student.id)}
-              className={`p-3.5 rounded-xl border cursor-pointer transition-all flex justify-between items-center ${
-                isPresent
+              className={`p-3.5 rounded-xl border cursor-pointer transition-all flex justify-between items-center ${isPresent
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
                   : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-              }`}
+                }`}
             >
               <div>
-                <p className="font-semibold text-sm">{student.name}</p>
-                <p className="text-xs text-slate-500">Penjaga: {student.parent_name || '-'}</p>
+                {/* <p className="font-semibold text-sm">{student.name}</p> */}
+                {/* <p className="text-xs text-slate-500">Penjaga: {student.parent_name || '-'}</p> */}
+                <span className="font-semibold text-sm text-slate-800 truncate mr-2">
+                  {student.name}
+                </span>
               </div>
               <span
-                className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  isPresent ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
-                }`}
+                className={`px-3 py-1 rounded-full text-xs font-bold ${isPresent ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}
               >
                 {isPresent ? 'Hadir' : 'Tidak Hadir'}
               </span>
