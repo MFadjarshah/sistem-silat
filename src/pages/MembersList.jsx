@@ -150,101 +150,106 @@ export default function MembersList({
                   </th>
 
                   <th className="py-3 px-3 text-center border-r border-slate-200">YURAN BULANAN 2026</th>
-                  {/* <th className="py-3 px-3 text-right">TINDAKAN</th> */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {displayedStudents.map((student, index) => (
-                  <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2.5 px-3 font-bold text-slate-400 text-center w-12">{index + 1}</td>
-                    
-                    {/* NAMA PELAJAR */}
-                    <td className="py-2.5 px-3 font-semibold text-slate-900">
-                      <button
-                        onClick={() => openEditModal(student)}
-                        className="hover:text-emerald-600 text-left underline decoration-dotted"
-                      >
-                        {student.name}
-                      </button>
-                    </td>
+                {displayedStudents.map((student, index) => {
+                  // SEMAKAN WARNA & STATUS YURAN TAHUNAN
+                  const annualStatus = student.status_fee_annual || 'Tunggakan';
+                  let annualBadgeStyle = 'bg-rose-100 text-rose-800 border-rose-300'; // Default Tunggakan (Merah)
 
-                    {/* JANTINA (L / P) */}
-                    <td className="py-2.5 px-3 text-center font-medium">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs ${
-                        student.gender === 'L' || student.gender === 'Lelaki'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : student.gender === 'P' || student.gender === 'Perempuan'
-                          ? 'bg-pink-50 text-pink-700 border border-pink-200'
-                          : 'text-slate-400'
-                      }`}>
-                        {student.gender === 'Lelaki' ? 'L' : student.gender === 'Perempuan' ? 'P' : student.gender || '-'}
-                      </span>
-                    </td>
+                  if (annualStatus === 'Selesai') {
+                    annualBadgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300'; // Selesai (Hijau)
+                  } else if (annualStatus === 'Pending') {
+                    annualBadgeStyle = 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'; // Pending (Kuning)
+                  }
 
-                    {/* UMUR */}
-                    <td className="py-2.5 px-3 text-center text-slate-600 font-medium">
-                      {student.age ? `${student.age}` : '-'}
-                    </td>
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-slate-400 text-center w-12">{index + 1}</td>
+                      
+                      {/* NAMA PELAJAR */}
+                      <td className="py-2.5 px-3 font-semibold text-slate-900">
+                        <button
+                          onClick={() => openEditModal(student)}
+                          className="hover:text-emerald-600 text-left underline decoration-dotted"
+                        >
+                          {student.name}
+                        </button>
+                      </td>
 
-                    {/* BENGKUNG */}
-                    <td className="py-2.5 px-3">
-                      <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded border ${getBeltBadgeStyle(student.belt_level)}`}>
-                        {student.belt_level}
-                      </span>
-                    </td>
+                      {/* JANTINA (L / P) */}
+                      <td className="py-2.5 px-3 text-center font-medium">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${
+                          student.gender === 'L' || student.gender === 'Lelaki'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : student.gender === 'P' || student.gender === 'Perempuan'
+                            ? 'bg-pink-50 text-pink-700 border border-pink-200'
+                            : 'text-slate-400'
+                        }`}>
+                          {student.gender === 'Lelaki' ? 'L' : student.gender === 'Perempuan' ? 'P' : student.gender || '-'}
+                        </span>
+                      </td>
 
-                    {/* YURAN TAHUNAN */}
-                    <td className="py-2.5 px-3">
-                      <button
-                        onClick={() => toggleAnnualFeeStatus(student.id, student.status_fee_annual)}
-                        disabled={updatingId === student.id}
-                        className={`px-2.5 py-0.5 rounded text-xs font-semibold border transition-all ${
-                          student.status_fee_annual === 'Selesai'
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            : 'bg-rose-100 text-rose-800 border-rose-300'
-                        }`}
-                      >
-                        {student.status_fee_annual}
-                      </button>
-                    </td>
+                      {/* UMUR */}
+                      <td className="py-2.5 px-3 text-center text-slate-600 font-medium">
+                        {student.age ? `${student.age}` : '-'}
+                      </td>
 
-                    {/* YURAN BULANAN */}
-                    <td className="py-2.5 px-3 border-r border-slate-100">
-                      <div className="flex items-center justify-center gap-1">
-                        {monthsListShort.map((m) => {
-                          const fee = (student.monthly_fees || []).find((f) => f.month_name === m.full);
-                          const isPaid = fee?.status === 'Selesai';
-                          const currentStatus = isPaid ? 'Selesai' : 'Tunggakan';
+                      {/* BENGKUNG */}
+                      <td className="py-2.5 px-3">
+                        <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded border ${getBeltBadgeStyle(student.belt_level)}`}>
+                          {student.belt_level}
+                        </span>
+                      </td>
 
-                          return (
-                            <button
-                              key={m.short}
-                              title={`${m.full}: ${currentStatus}`}
-                              onClick={() => toggleMonthlyFeeDirect(student.id, m.full, currentStatus)}
-                              className={`w-5 h-5 text-[9px] font-bold rounded flex items-center justify-center transition-all ${
-                                isPaid
-                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                  : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-300'
-                              }`}
-                            >
-                              {m.short[0]}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </td>
+                      {/* YURAN TAHUNAN */}
+                      <td className="py-2.5 px-3">
+                        <button
+                          onClick={() => toggleAnnualFeeStatus(student.id, student.status_fee_annual)}
+                          disabled={updatingId === student.id}
+                          className={`px-2.5 py-0.5 rounded text-xs font-semibold border transition-all ${annualBadgeStyle}`}
+                        >
+                          {annualStatus}
+                        </button>
+                      </td>
 
-                    {/* TINDAKAN */}
-                    {/* <td className="py-2.5 px-3 text-right">
-                      <button
-                        onClick={() => openEditModal(student)}
-                        className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-2 py-1 rounded border border-slate-300 transition-colors"
-                      >
-                        Edit
-                      </button>
-                    </td> */}
-                  </tr>
-                ))}
+                      {/* YURAN BULANAN */}
+                      <td className="py-2.5 px-3 border-r border-slate-100">
+                        <div className="flex items-center justify-center gap-1">
+                          {(monthsListShort || []).map((m) => {
+                            // Cari rekod yuran bulan berkenaan
+                            const fee = (student.monthly_fees || []).find(
+                              (f) => f.month_name === m.full || f.month_name === m.short
+                            );
+
+                            const currentStatus = fee?.status || 'Tunggakan';
+
+                            // Tetapkan gaya petak mengikut status (Selesai, Pending, Tunggakan)
+                            let monthBtnStyle = 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-300'; // Default Tunggakan (Kelabu)
+
+                            if (currentStatus === 'Selesai' || currentStatus === 'paid') {
+                              monthBtnStyle = 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600'; // Selesai (Hijau)
+                            } else if (currentStatus === 'Pending' || currentStatus === 'pending') {
+                              monthBtnStyle = 'bg-amber-400 text-amber-950 hover:bg-amber-500 font-bold border-amber-500 animate-pulse'; // Pending (Kuning)
+                            }
+
+                            return (
+                              <button
+                                key={m.short}
+                                title={`${m.full}: ${currentStatus}`}
+                                onClick={() => toggleMonthlyFeeDirect(student.id, m.full, currentStatus)}
+                                className={`w-5 h-5 text-[9px] font-bold rounded flex items-center justify-center transition-all ${monthBtnStyle}`}
+                              >
+                                {m.short[0]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

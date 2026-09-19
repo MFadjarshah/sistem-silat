@@ -147,19 +147,49 @@ export default function App() {
       }));
 
       setStudents(formattedData);
+
+      // 1. Jika belum ada pelajar dipilih, pilih pelajar pertama
       if (formattedData.length > 0 && !selectedStudentId) {
         setSelectedStudentId(formattedData[0].id);
+      }
+
+      // 2. KUNCI UTAMA: Jika pelajar sudah dipilih, kemaskini maklumat terpilih secara realtime!
+      if (selectedStudentId) {
+        const updatedStudent = formattedData.find(s => s.id === selectedStudentId);
+        if (updatedStudent && typeof setSelectedStudent === 'function') {
+          setSelectedStudent(updatedStudent);
+        }
       }
     }
   }
 
   async function fetchReceipts() {
-    const { data, error } = await supabase
-      .from('receipts')
-      .select('*, students(name, parent_name)')
-      .order('id', { ascending: false });
-    if (!error && data) {
-      setReceipts(data);
+    try {
+      // Gunakan name dan guardian_name (atau semak nama ruangan penjaga yang tepat dalam Supabase)
+      const { data, error } = await supabase
+        .from('receipts')
+        .select('*, students(name, guardian_name)')
+        .order('id', { ascending: false });
+
+      if (error) {
+        console.error('Ralat mengambil data resit:', error);
+        // Jika 'guardian_name' tiada, cuba ambil semua ruangan students
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('receipts')
+          .select('*, students(*)')
+          .order('id', { ascending: false });
+
+        if (!fallbackError && fallbackData) {
+          setReceipts(fallbackData);
+        }
+        return;
+      }
+
+      if (data) {
+        setReceipts(data);
+      }
+    } catch (err) {
+      console.error('Catch error fetchReceipts:', err);
     }
   }
 
@@ -600,71 +630,215 @@ export default function App() {
     processBulkInsert(parsed.data);
   }
 
-  async function handleUploadReceipt(e) {
+  async function handleUploadReceipt(e, { selectedMonths, payAnnual }) {
     e.preventDefault();
-    if (!file || !selectedStudentId) {
-      alert('Sila pilih anak dan fail resit!');
+
+    if (!selectedStudentId) {
+      alert('Sila pilih anak terlebih dahulu.');
       return;
     }
 
-    setUploading(true);
-    setUploadStatus('');
-
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${selectedStudentId}.${fileExt}`;
-      const filePath = `receipts/${fileName}`;
+      setUploading(true);
 
-      const { error: uploadError } = await supabase.storage
+      // 1. Muat naik fail resit ke Storage (jika ada)
+      let fileUrl = '';
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data: storageData, error: storageErr } = await supabase
+          .storage
+          .from('receipts')
+          .upload(fileName, file);
+
+        if (storageErr) throw storageErr;
+
+        const { data: urlData } = supabase
+          .storage
+          .from('receipts')
+          .getPublicUrl(fileName);
+
+        fileUrl = urlData.publicUrl;
+      }
+
+      // 2. ✅ DIBETULKAN: Masukkan terus rekod resit baru ke dalam jadual 'receipts'
+      const { error: receiptErr } = await supabase
         .from('receipts')
-        .upload(filePath, file);
+        .insert([
+          {
+            student_id: selectedStudentId,
+            selected_months: selectedMonths,
+            pay_annual: payAnnual,
+            file_url: fileUrl,
+            status: 'Pending',
+            created_at: new Date().toISOString()
+          }
+        ]);
 
-      if (uploadError) throw uploadError;
+      if (receiptErr) throw receiptErr;
 
-      const { data: urlData } = supabase.storage
-        .from('receipts')
-        .getPublicUrl(filePath);
+      // 3. Kemaskini jadual 'students' untuk Yuran Tahunan
+      if (payAnnual) {
+        const { error: studentErr } = await supabase
+          .from('students')
+          .update({ status_fee_annual: 'Pending' })
+          .eq('id', selectedStudentId);
 
-      const publicUrl = urlData.publicUrl;
+        if (studentErr) console.error('Ralat update status_fee_annual:', studentErr);
+      }
 
-      const { error: dbError } = await supabase.from('receipts').insert([
-        {
-          student_id: selectedStudentId,
-          file_url: publicUrl,
-          status: 'Pending'
-        }
-      ]);
+      // 4. Kemaskini jadual 'monthly_fees' kepada 'Pending'
+      if (Array.isArray(selectedMonths) && selectedMonths.length > 0) {
+        const monthMap = {
+          Jan: 'Januari', Feb: 'Februari', Mac: 'Mac', Apr: 'April',
+          Mei: 'Mei', Jun: 'Jun', Jul: 'Julai', Ogos: 'Ogos',
+          Sep: 'September', Okt: 'Oktober', Nov: 'November', Dis: 'Disember'
+        };
 
-      if (dbError) throw dbError;
+        const formattedMonths = selectedMonths.map(m => monthMap[m] || m);
 
+        const { error: monthErr } = await supabase
+          .from('monthly_fees')
+          .update({ status: 'Pending' })
+          .eq('student_id', selectedStudentId)
+          .eq('year', 2026)
+          .in('month_name', formattedMonths);
+
+        if (monthErr) console.error('Ralat update monthly_fees:', monthErr);
+      }
+
+      alert('Resit berjaya dihantar!');
       setUploadStatus('success');
-      setFile(null);
-      fetchReceipts();
-    } catch (error) {
-      console.error('Ralat Upload:', error);
+
+      // Reset pilihan pelajar kembali ke kosong
+      if (typeof setSelectedStudentId === 'function') {
+        setSelectedStudentId('');
+      }
+
+      // Refetch data
+      if (typeof fetchStudents === 'function') await fetchStudents();
+      if (typeof fetchReceipts === 'function') await fetchReceipts();
+
+    } catch (err) {
+      console.error('Ralat Muat Naik:', err);
+      alert('Gagal memuat naik resit: ' + err.message);
       setUploadStatus('error');
     } finally {
       setUploading(false);
     }
   }
 
-  async function handleApproveReceipt(receiptId, studentId) {
+  // 1. Fungsi Sahkan Resit (Diperbaiki untuk kemaskini yuran bulanan & tahunan)
+  async function handleApproveReceipt(receiptId, studentId, receiptData) {
     try {
-      await supabase
+      // 1. Kemaskini status resit kepada 'Selesai'
+      const { data: updatedReceipt, error: receiptError } = await supabase
         .from('receipts')
-        .update({ status: 'Approved' })
-        .eq('id', receiptId);
+        .update({ status: 'Selesai' })
+        .eq('id', receiptId)
+        .select();
 
-      await supabase
-        .from('students')
-        .update({ status_fee_annual: 'Selesai' })
-        .eq('id', studentId);
+      if (receiptError) throw receiptError;
+
+      if (!updatedReceipt || updatedReceipt.length === 0) {
+        alert('Amaran: Data tidak dikemaskini di Supabase. Sila semak RLS pada jadual receipts.');
+        return;
+      }
+
+      // Ambil maklumat bulan dan yuran tahunan dari resit
+      const monthsToApprove = receiptData?.selected_months || updatedReceipt[0]?.selected_months || [];
+      const isPayAnnual = receiptData?.pay_annual || updatedReceipt[0]?.payment_type === 'annual';
+
+      // 2. Kemaskini jadual 'monthly_fees' (jika ada bulan yang dipilih)
+      if (Array.isArray(monthsToApprove) && monthsToApprove.length > 0) {
+        // Peta penukaran nama bulan singkatan ke nama penuh (jika perlu)
+        const monthMap = {
+          Jan: 'Januari', Feb: 'Februari', Mac: 'Mac', Apr: 'April',
+          Mei: 'Mei', Jun: 'Jun', Jul: 'Julai', Ogos: 'Ogos',
+          Sep: 'September', Okt: 'Oktober', Nov: 'November', Dis: 'Disember'
+        };
+
+        const formattedMonths = monthsToApprove.map(m => monthMap[m] || m);
+
+        const { error: monthErr } = await supabase
+          .from('monthly_fees')
+          .update({ status: 'Selesai' })
+          .eq('student_id', studentId)
+          .eq('year', 2026)
+          .in('month_name', formattedMonths);
+
+        if (monthErr) throw monthErr;
+      }
+
+      // 3. Kemaskini jadual 'students' (jika bayaran merangkumi Yuran Tahunan)
+      if (isPayAnnual) {
+        const { error: studentError } = await supabase
+          .from('students')
+          .update({ status_fee_annual: 'Selesai' })
+          .eq('id', studentId);
+
+        if (studentError) throw studentError;
+      }
 
       alert('Pembayaran berjaya disahkan!');
-      fetchData();
+
+      // 4. Muat semula data
+      if (typeof fetchReceipts === 'function') await fetchReceipts();
+      if (typeof fetchStudents === 'function') await fetchStudents();
+
     } catch (error) {
       console.error('Ralat Pengesahan:', error);
-      alert('Gagal mengemas kini pengesahan.');
+      alert(`Gagal mengemas kini pengesahan: ${error.message || 'Sila semak konsol'}`);
+    }
+  }
+
+  // 2. Fungsi Padam Resit (Untuk dimasukkan ke App.jsx)
+  async function handleDeleteReceipt(receiptId) {
+    try {
+      // 1. Cari rekod resit terlebih dahulu untuk dapatkan URL / nama fail
+      const { data: receipt, error: fetchErr } = await supabase
+        .from('receipts')
+        .select('file_url')
+        .eq('id', receiptId)
+        .single();
+
+      if (fetchErr) throw fetchErr;
+
+      // 2. Padam fail dari Supabase Storage jika file_url wujud
+      if (receipt && receipt.file_url) {
+        // Dapatkan nama fail daripada URL (contoh: https://.../receipts/resit-123.jpg -> resit-123.jpg)
+        const filePath = receipt.file_url.split('/').pop();
+
+        if (filePath) {
+          const { error: storageErr } = await supabase
+            .storage
+            .from('receipts') // Tukar 'receipts' ke nama Bucket Storage anda jika berbeza
+            .remove([filePath]);
+
+          if (storageErr) {
+            console.warn('Gagal memadam fail dari Storage:', storageErr.message);
+          }
+        }
+      }
+
+      // 3. Padam rekod dari jadual database
+      const { error: deleteErr } = await supabase
+        .from('receipts')
+        .delete()
+        .eq('id', receiptId);
+
+      if (deleteErr) throw deleteErr;
+
+      // 4. Kemaskini UI / state
+      setReceipts((prev) => prev.filter((r) => r.id !== receiptId));
+      alert('Resit dan fail gambar berjaya dipadam sepenuhnya!');
+
+      if (typeof fetchReceipts === 'function') {
+        await fetchReceipts();
+      }
+    } catch (err) {
+      console.error('Ralat semasa memadam resit:', err);
+      alert(`Gagal memadam resit: ${err.message}`);
     }
   }
 
@@ -924,6 +1098,7 @@ export default function App() {
             <Payments
               receipts={receipts}
               handleApproveReceipt={handleApproveReceipt}
+              handleDeleteReceipt={handleDeleteReceipt}
             />
           )}
 
