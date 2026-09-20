@@ -168,7 +168,7 @@ export default function App() {
       // Gunakan name dan guardian_name (atau semak nama ruangan penjaga yang tepat dalam Supabase)
       const { data, error } = await supabase
         .from('receipts')
-        .select('*, students(name, guardian_name)')
+        .select('*, students(name, parent_name)')
         .order('id', { ascending: false });
 
       if (error) {
@@ -447,10 +447,12 @@ export default function App() {
         .from('students')
         .update({
           name: editName,
-          parent_name: editParentName,
+          parent_name: editParentName, // Menyimpan nama penjaga
+          parent_name: editParentName,   // Menyimpan ke parent_name (jika ada)
           gender: editGender || null,
           age: isNaN(parsedAge) ? null : parsedAge,
-          phone: editPhone,
+          parent_phone: editPhone,       // 💡 KUNCI UTAMA: Disimpan ke parent_phone
+          phone: editPhone,              // Disimpan ke phone juga sebagai sandaran
           address: editAddress,
           belt_level: editBeltLevel
         })
@@ -478,39 +480,6 @@ export default function App() {
     setEditPhone(student.phone || '');
     setEditAddress(student.address || '');
     setEditBeltLevel(student.belt_level || 'Putih');
-  }
-
-  async function handleUpdateStudent(e) {
-    e.preventDefault();
-    if (!selectedStudentForEdit) return;
-
-    setIsUpdatingStudent(true);
-    try {
-      // Hantar data spesifik sahaja, elakkan menghantar data berantai dari jadual lain
-      const { error } = await supabase
-        .from('students')
-        .update({
-          name: editName,
-          parent_name: editParentName,
-          gender: editGender,
-          age: editAge,
-          phone: editPhone,
-          address: editAddress,
-          belt_level: editBeltLevel
-        })
-        .eq('id', selectedStudentForEdit.id);
-
-      if (error) throw error;
-
-      alert('Maklumat pelajar berjaya dikemaskini!');
-      setSelectedStudentForEdit(null);
-      fetchStudents();
-    } catch (err) {
-      console.error('Ralat Kemaskini Pelajar:', err);
-      alert(`Gagal mengemaskini: ${err.message || err.details || 'Sila semak konsol'}`);
-    } finally {
-      setIsUpdatingStudent(false);
-    }
   }
 
   async function handleSetStudentStatus(studentId, newStatus) {
@@ -640,6 +609,7 @@ export default function App() {
 
     try {
       setUploading(true);
+      setUploadStatus(null);
 
       // 1. Muat naik fail resit ke Storage (jika ada)
       let fileUrl = '';
@@ -1111,6 +1081,7 @@ export default function App() {
               setFile={setFile}
               uploading={uploading}
               uploadStatus={uploadStatus}
+              setUploadStatus={setUploadStatus}
             />
           )}
         </main>
