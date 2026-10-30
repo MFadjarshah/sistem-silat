@@ -4,11 +4,17 @@ export default function Sidebar({ activeMenu, setActiveMenu, setMemberFilterStat
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex shadow-xl shrink-0">
       <div>
-        <div className="p-4 border-b border-slate-800 bg-slate-950/50">
-          <h1 className="text-lg font-bold text-emerald-400 tracking-wide flex items-center gap-2">
-            <span>🥋</span> E-Silat Portal
+        <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex flex-col items-center text-center">
+          <img
+            src="/logo.png"
+            alt="Logo Silat"
+            className="w-100 h-20 object-contain mb-2"
+          />
+          <h1 className="text-lg font-bold text-emerald-400 tracking-wide">
+            E-Silat Portal
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">Sistem Gelanggang Silat</p>
+          <p className="text-xs text-slate-500 mt-0.5">Gelanggang Pewaris Kesuma</p>
+          <p className="text-xs text-slate-500 mt-0.5">Surau An-Nur Villa Mutiara</p>
         </div>
 
         <nav className="p-3 space-y-1">
@@ -18,18 +24,16 @@ export default function Sidebar({ activeMenu, setActiveMenu, setMemberFilterStat
 
           <button
             onClick={() => setActiveMenu('dashboard')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeMenu === 'dashboard' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'dashboard' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span>📊</span> Dashboard Summary
           </button>
 
           <button
             onClick={() => setActiveMenu('parent-portal')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeMenu === 'parent-portal' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'parent-portal' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span>👨‍👩‍👧</span> Portal Ibu Bapa
           </button>
@@ -43,11 +47,10 @@ export default function Sidebar({ activeMenu, setActiveMenu, setMemberFilterStat
               setActiveMenu('admin-members');
               setMemberFilterStatus('Aktif');
             }}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeMenu === 'admin-members' && memberFilterStatus === 'Aktif'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'admin-members' && memberFilterStatus === 'Aktif'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span>📋</span> Senarai Ahli Aktif
           </button>
@@ -57,29 +60,26 @@ export default function Sidebar({ activeMenu, setActiveMenu, setMemberFilterStat
               setActiveMenu('admin-members');
               setMemberFilterStatus('Berhenti');
             }}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeMenu === 'admin-members' && memberFilterStatus === 'Berhenti'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'admin-members' && memberFilterStatus === 'Berhenti'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span>📜</span> Sejarah Ahli (Berhenti)
           </button>
 
           <button
             onClick={() => setActiveMenu('admin-attendance')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeMenu === 'admin-attendance' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'admin-attendance' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span>📋</span> Tanda Kehadiran Sesi
           </button>
 
           <button
             onClick={() => setActiveMenu('admin-payments')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              activeMenu === 'admin-payments' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeMenu === 'admin-payments' ? 'bg-emerald-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'
+              }`}
           >
             <span>💳</span> Semakan Resit
           </button>
