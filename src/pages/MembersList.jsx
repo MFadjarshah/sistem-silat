@@ -48,8 +48,8 @@ export default function MembersList({
             Tiada rekod pelajar ditemui mengikut penapis Excel ini.
           </div>
         ) : (
-          <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full text-left text-sm text-slate-700">
+          <div className="block w-full overflow-x-auto rounded-xl shadow-xs border border-slate-200 bg-white">
+            <table className="w-full min-w-[900px] text-left text-sm text-slate-700 border-collapse">
               <thead className="bg-slate-100 border-b border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-wider select-none">
                 <tr>
                   <th className="py-3 px-3 w-12 text-center border-r border-slate-200">NO.</th>
@@ -63,9 +63,8 @@ export default function MembersList({
                           setColumnSearch('');
                           setOpenFilterCol(openFilterCol === 'name' ? null : 'name');
                         }}
-                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
-                          (filters.name || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
-                        }`}
+                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${(filters.name || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                          }`}
                       >
                         🔻
                       </button>
@@ -82,9 +81,8 @@ export default function MembersList({
                           setColumnSearch('');
                           setOpenFilterCol(openFilterCol === 'gender' ? null : 'gender');
                         }}
-                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
-                          (filters.gender || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
-                        }`}
+                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${(filters.gender || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                          }`}
                       >
                         🔻
                       </button>
@@ -101,9 +99,8 @@ export default function MembersList({
                           setColumnSearch('');
                           setOpenFilterCol(openFilterCol === 'age' ? null : 'age');
                         }}
-                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
-                          (filters.age || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
-                        }`}
+                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${(filters.age || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                          }`}
                       >
                         🔻
                       </button>
@@ -120,9 +117,8 @@ export default function MembersList({
                           setColumnSearch('');
                           setOpenFilterCol(openFilterCol === 'belt_level' ? null : 'belt_level');
                         }}
-                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
-                          (filters.belt_level || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
-                        }`}
+                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${(filters.belt_level || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                          }`}
                       >
                         🔻
                       </button>
@@ -139,9 +135,8 @@ export default function MembersList({
                           setColumnSearch('');
                           setOpenFilterCol(openFilterCol === 'status_fee_annual' ? null : 'status_fee_annual');
                         }}
-                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${
-                          (filters.status_fee_annual || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
-                        }`}
+                        className={`p-1 rounded hover:bg-slate-200 border border-slate-300 ${(filters.status_fee_annual || []).length > 0 ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-white text-slate-600'
+                          }`}
                       >
                         🔻
                       </button>
@@ -167,7 +162,7 @@ export default function MembersList({
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-2.5 px-3 font-bold text-slate-400 text-center w-12">{index + 1}</td>
-                      
+
                       {/* NAMA PELAJAR */}
                       <td className="py-2.5 px-3 font-semibold text-slate-900">
                         <button
@@ -180,13 +175,12 @@ export default function MembersList({
 
                       {/* JANTINA (L / P) */}
                       <td className="py-2.5 px-3 text-center font-medium">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${
-                          student.gender === 'L' || student.gender === 'Lelaki'
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs ${student.gender === 'L' || student.gender === 'Lelaki'
                             ? 'bg-blue-50 text-blue-700 border border-blue-200'
                             : student.gender === 'P' || student.gender === 'Perempuan'
-                            ? 'bg-pink-50 text-pink-700 border border-pink-200'
-                            : 'text-slate-400'
-                        }`}>
+                              ? 'bg-pink-50 text-pink-700 border border-pink-200'
+                              : 'text-slate-400'
+                          }`}>
                           {student.gender === 'Lelaki' ? 'L' : student.gender === 'Perempuan' ? 'P' : student.gender || '-'}
                         </span>
                       </td>

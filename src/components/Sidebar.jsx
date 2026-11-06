@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function Sidebar({ activeMenu, setActiveMenu, setMemberFilterStatus, memberFilterStatus }) {
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex shadow-xl shrink-0">
+    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between md:flex h-screen shadow-xl shrink-0">
       <div>
         <div className="p-4 border-b border-slate-800 bg-slate-950/50 flex flex-col items-center text-center">
           <img

@@ -57,6 +57,9 @@ export default function App() {
     status_fee_annual: []
   });
 
+  // Kawal mobile sidebar  
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   // Portal Ibu Bapa
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [file, setFile] = useState(null);
@@ -1001,16 +1004,69 @@ export default function App() {
   });
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
-      <Sidebar
-        activeMenu={activeMenu}
-        setActiveMenu={setActiveMenu}
-        setMemberFilterStatus={setMemberFilterStatus}
-        memberFilterStatus={memberFilterStatus}
-      />
+    <div className="flex flex-col md:flex-row h-screen bg-slate-100 font-sans overflow-hidden">
+
+      {/* 📱 Mobile Top Header (Hanya muncul pada skrin kecil / telefon) */}
+      <div className="md:hidden flex items-center justify-between bg-white border-b border-slate-200 px-4 py-3 shrink-0 h-14 z-30 shadow-xs">
+        <button
+          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          className="p-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 focus:outline-none"
+          aria-label="Toggle Menu"
+        >
+          {isMobileSidebarOpen ? (
+            // Ikon X (Tutup)
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            // Ikon Hamburger ☰ (Buka)
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
+        <span className="text-xs font-bold text-slate-800 truncate">
+          {activeMenu === 'dashboard' && 'Dashboard'}
+          {activeMenu === 'admin-members' && 'Senarai Ahli'}
+          {activeMenu === 'admin-attendance' && 'Kehadiran'}
+          {activeMenu === 'admin-payments' && 'Pengesahan Resit'}
+          {activeMenu === 'parent-portal' && 'Portal Ibu Bapa'}
+        </span>
+        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+          Live
+        </span>
+      </div>
+
+      {/* Backdrop Gelap bila Sidebar Mobile Terbuka */}
+      {isMobileSidebarOpen && (
+        <div
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        />
+      )}
+
+      {/* Sidebar (Responsive drawer untuk mobile & statik untuk desktop) */}
+      <div
+        className={`
+          fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out bg-white shadow-xl md:shadow-none
+          md:translate-x-0 md:static md:h-screen md:shrink-0
+          ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <Sidebar
+          activeMenu={activeMenu}
+          setActiveMenu={(menu) => {
+            setActiveMenu(menu);
+            setIsMobileSidebarOpen(false); // Tutup sidebar automatik di telefon apabila menu ditekan
+          }}
+          setMemberFilterStatus={setMemberFilterStatus}
+          memberFilterStatus={memberFilterStatus}
+        />
+      </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shadow-xs shrink-0 h-14">
+        {/* Header Desktop (Sembunyi pada skrin mobile kerana dah ada mobile header di atas) */}
+        <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-3 justify-between items-center shadow-xs shrink-0 h-14">
           <h2 className="text-base font-bold text-slate-800">
             {activeMenu === 'dashboard' && 'Dashboard Summary Kehadiran & Yuran'}
             {activeMenu === 'admin-members' && (memberFilterStatus === 'Aktif' ? 'Senarai Ahli Aktif' : 'Sejarah Ahli (Berhenti)')}
